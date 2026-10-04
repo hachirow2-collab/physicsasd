@@ -1,0 +1,887 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Sound Wave Simulator</title>
+
+<style>
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: #eee;
+  font-family: Arial, sans-serif;
+  color: #172033;
+}
+
+header {
+  background: #2459b8;
+  color: white;
+  padding: 14px 20px;
+}
+
+h1 {
+  font-size: 22px;
+  margin: 0;
+}
+
+header p {
+  margin: 5px 0 0;
+}
+
+main {
+  max-width: 1150px;
+  margin: 16px auto;
+  padding: 0 12px;
+}
+
+.layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 270px;
+  gap: 12px;
+}
+
+.panel {
+  background: white;
+  border: 1px solid #bbc2cc;
+  border-radius: 8px;
+  padding: 15px;
+}
+
+canvas {
+  display: block;
+  width: 100%;
+  height: 460px;
+  background: #858585;
+  border-radius: 5px;
+  touch-action: none;
+  cursor: grab;
+}
+
+canvas:active {
+  cursor: grabbing;
+}
+
+label {
+  display: flex;
+  justify-content: space-between;
+  font-weight: bold;
+  margin: 12px 0 7px;
+}
+
+input[type="range"] {
+  width: 100%;
+  accent-color: #2459b8;
+}
+
+input[type="checkbox"] {
+  accent-color: #2459b8;
+}
+
+button {
+  padding: 10px 14px;
+  border: 0;
+  border-radius: 6px;
+  background: #2459b8;
+  color: white;
+  font-weight: bold;
+  cursor: pointer;
+  margin: 12px 5px 0 0;
+}
+
+button:hover {
+  opacity: .85;
+}
+
+.info {
+  margin-top: 12px;
+  line-height: 1.5;
+}
+
+.readings {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin-top: 14px;
+}
+
+.reading {
+  background: #f0f4fb;
+  border-radius: 6px;
+  padding: 9px;
+}
+
+.reading span {
+  display: block;
+  color: #566174;
+  font-size: 12px;
+}
+
+.reading strong {
+  font-size: 18px;
+  color: #183f85;
+}
+
+/* Highlight wave speed */
+.reading.speed-highlight {
+  background: #174ea6;
+  border: 2px solid #ffdf55;
+  padding: 12px;
+  text-align: center;
+}
+
+.reading.speed-highlight span {
+  color: #fff;
+  font-size: 14px;
+  font-weight: bold;
+}
+
+.reading.speed-highlight strong {
+  display: block;
+  color: #ffeb70;
+  font-size: 30px;
+  font-weight: bold;
+  margin-top: 5px;
+}
+
+.measure {
+  margin-top: 14px;
+  border-top: 1px solid #ddd;
+  padding-top: 10px;
+}
+
+.measure label {
+  font-size: 13px;
+}
+
+#speed {
+  height: 12px;
+  cursor: pointer;
+  accent-color: #e49b13;
+}
+
+#so {
+  color: #174ea6;
+  font-size: 18px;
+  font-weight: bold;
+}
+
+@media (max-width: 760px) {
+  .layout {
+    grid-template-columns: 1fr;
+  }
+
+  canvas {
+    height: 360px;
+  }
+}
+</style>
+</head>
+
+<body>
+
+<header>
+  <h1>Sound Wave Simulator</h1>
+  <p>Explore moving sound waves and measure their properties</p>
+</header>
+
+<main>
+<div class="layout">
+
+  <!-- SIMULATION -->
+  <section class="panel">
+    <canvas id="sim"></canvas>
+
+    <!-- READINGS -->
+    <div class="readings">
+      <div class="reading">
+        <span>Wavelength (λ)</span>
+        <strong id="lambdaRead">—</strong>
+      </div>
+
+      <div class="reading">
+        <span>Frequency (f)</span>
+        <strong id="freqRead">—</strong>
+      </div>
+
+      <div class="reading speed-highlight">
+        <span>⚡ WAVE SPEED (v)</span>
+        <strong id="speedRead">340 m/s</strong>
+      </div>
+
+      <div class="reading">
+        <span>Period (T)</span>
+        <strong id="periodRead">—</strong>
+      </div>
+    </div>
+  </section>
+
+  <!-- CONTROLS -->
+  <aside class="panel">
+
+    <label>
+      Frequency
+      <output id="fo">4 Hz</output>
+    </label>
+    <input id="frequency" type="range"
+      min="1" max="12" value="4">
+
+    <label>
+      Amplitude
+      <output id="ao">50%</output>
+    </label>
+    <input id="amplitude" type="range"
+      min="10" max="100" value="50" step="5">
+
+    <label>
+      Wave speed
+      <output id="so">340 m/s</output>
+    </label>
+    <input id="speed" type="range"
+      min="170" max="680" value="340" step="10">
+
+    <div class="measure">
+      <b>Measurement tools</b>
+
+      <label style="font-weight:normal">
+        <span>
+          <input id="showRuler" type="checkbox"
+            checked style="width:auto">
+          Show movable ruler
+        </span>
+      </label>
+
+      <label style="font-weight:normal">
+        <span>
+          <input id="showGrid" type="checkbox"
+            style="width:auto">
+          Show grid
+        </span>
+      </label>
+    </div>
+
+    <button id="play">⏸ Pause</button>
+    <button id="sound">🔊 Turn Sound On</button>
+    <button id="reset" style="background:#596579">
+      ↺ Reset
+    </button>
+
+    <p class="info">
+      <b>How to use:</b><br>
+      Drag the listener or ruler on the canvas.
+      Change frequency, amplitude, and wave speed
+      using the sliders. Turn on sound to hear
+      the changes.
+    </p>
+  </aside>
+</div>
+
+<div class="panel info">
+  <b>Physics note:</b>
+  Sound is a longitudinal wave made of compressions
+  and rarefactions. The alternating bands are a
+  visual model of wave fronts. Wavelength is
+  calculated using λ = v ÷ f, and period using
+  T = 1 ÷ f.
+  The audio is a simplified tone model, not a full
+  simulation of sound traveling through air.
+</div>
+</main>
+
+<script>
+// ELEMENTS
+const c = document.querySelector('#sim');
+const ctx = c.getContext('2d');
+
+const f = document.querySelector('#frequency');
+const a = document.querySelector('#amplitude');
+const s = document.querySelector('#speed');
+
+const fo = document.querySelector('#fo');
+const ao = document.querySelector('#ao');
+const so = document.querySelector('#so');
+
+const playBtn = document.querySelector('#play');
+const soundBtn = document.querySelector('#sound');
+const showRuler = document.querySelector('#showRuler');
+const showGrid = document.querySelector('#showGrid');
+
+// ANIMATION
+let playing = true;
+let t = 0;
+let last = 0;
+
+// MOVABLE OBJECTS
+let listenerX = null;
+let listenerY = null;
+let rulerX = null;
+let rulerY = null;
+
+let dragging = null;
+let dragOffsetX = 0;
+let dragOffsetY = 0;
+
+// AUDIO
+let audioContext = null;
+let oscillator = null;
+let gainNode = null;
+let soundOn = false;
+
+// CANVAS RESIZE
+function resize() {
+  const d = window.devicePixelRatio || 1;
+  const r = c.getBoundingClientRect();
+
+  c.width = r.width * d;
+  c.height = r.height * d;
+}
+
+window.addEventListener('resize', resize);
+resize();
+
+function dimensions() {
+  const d = window.devicePixelRatio || 1;
+  return {
+    w: c.width / d,
+    h: c.height / d
+  };
+}
+
+// SPEAKER
+function speaker(x, y) {
+  ctx.fillStyle = '#24252b';
+  ctx.strokeStyle = '#111';
+  ctx.lineWidth = 2;
+
+  ctx.beginPath();
+  ctx.moveTo(x, y - 45);
+  ctx.lineTo(x + 38, y - 72);
+  ctx.lineTo(x + 38, y + 72);
+  ctx.lineTo(x, y + 45);
+  ctx.closePath();
+  ctx.fill();
+  ctx.stroke();
+
+  ctx.fillStyle = '#303d59';
+  ctx.fillRect(x - 28, y - 25, 26, 50);
+  ctx.strokeRect(x - 28, y - 25, 26, 50);
+
+  ctx.fillStyle = '#d5ad42';
+  ctx.fillRect(x - 32, y - 28, 4, 56);
+}
+
+// LISTENER
+function listener(x, y) {
+  // Hair
+  ctx.fillStyle = '#743b2e';
+  ctx.beginPath();
+  ctx.arc(x, y - 25, 22, Math.PI, 0);
+  ctx.fill();
+
+  // Face
+  ctx.fillStyle = '#e9b88e';
+  ctx.beginPath();
+  ctx.ellipse(x, y - 17, 18, 23, 0, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Eyes
+  ctx.fillStyle = '#34251e';
+  ctx.beginPath();
+  ctx.arc(x - 6, y - 20, 2, 0, Math.PI * 2);
+  ctx.arc(x + 6, y - 20, 2, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Mouth
+  ctx.strokeStyle = '#8d443b';
+  ctx.beginPath();
+  ctx.arc(x, y - 10, 5, 0.2, Math.PI - 0.2);
+  ctx.stroke();
+
+  // Shirt
+  ctx.fillStyle = '#254d8b';
+  ctx.beginPath();
+  ctx.moveTo(x - 22, y + 34);
+  ctx.lineTo(x - 14, y + 4);
+  ctx.lineTo(x + 14, y + 4);
+  ctx.lineTo(x + 22, y + 34);
+  ctx.fill();
+
+  // Label
+  ctx.fillStyle = 'white';
+  ctx.font = '12px Arial';
+  ctx.textAlign = 'center';
+  ctx.fillText('Listener', x, y + 51);
+}
+
+// RULER
+function drawRuler(x, y, w) {
+  const meterPixels = 75;
+  const totalMeters = 5;
+  const rulerWidth = meterPixels * totalMeters;
+  const rulerHeight = 76;
+
+  x = Math.max(5, Math.min(x, w - rulerWidth - 5));
+
+  // Yellow body
+  ctx.fillStyle = '#f5e879';
+  ctx.fillRect(x, y, rulerWidth, rulerHeight);
+
+  // Black border
+  ctx.strokeStyle = '#111';
+  ctx.lineWidth = 2;
+  ctx.strokeRect(x, y, rulerWidth, rulerHeight);
+
+  // Tick marks
+  ctx.strokeStyle = '#111';
+  ctx.lineWidth = 1.5;
+
+  for (let i = 0; i <= totalMeters * 10; i++) {
+    const tickX = x + i * (meterPixels / 10);
+    const isMeter = i % 10 === 0;
+    const isHalf = i % 5 === 0;
+
+    const tickLength = isMeter ? 23 : isHalf ? 16 : 10;
+
+    // Top ticks
+    ctx.beginPath();
+    ctx.moveTo(tickX, y);
+    ctx.lineTo(tickX, y + tickLength);
+    ctx.stroke();
+
+    // Bottom ticks
+    ctx.beginPath();
+    ctx.moveTo(tickX, y + rulerHeight);
+    ctx.lineTo(tickX, y + rulerHeight - tickLength);
+    ctx.stroke();
+  }
+
+  // Labels
+  ctx.fillStyle = '#111';
+  ctx.font = '24px Arial';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+
+  for (let m = 0; m <= totalMeters; m++) {
+    const labelX = x + m * meterPixels;
+
+    if (m === totalMeters) {
+      ctx.fillText(m + ' m', labelX, y + rulerHeight / 2);
+    } else {
+      ctx.fillText(String(m), labelX, y + rulerHeight / 2);
+    }
+  }
+}
+
+// AUDIO
+function updateAudio() {
+  if (!soundOn || !oscillator || !gainNode) return;
+
+  const audibleFrequency = 180 + Number(f.value) * 45;
+
+  oscillator.frequency.setTargetAtTime(
+    audibleFrequency,
+    audioContext.currentTime,
+    0.03
+  );
+
+  const volume = (Number(a.value) / 100) * 0.12;
+
+  gainNode.gain.setTargetAtTime(
+    volume,
+    audioContext.currentTime,
+    0.03
+  );
+}
+
+async function toggleSound() {
+  if (soundOn) {
+    gainNode.gain.setTargetAtTime(
+      0,
+      audioContext.currentTime,
+      0.03
+    );
+
+    soundOn = false;
+    soundBtn.textContent = '🔊 Turn Sound On';
+    return;
+  }
+
+  const AudioCtx = window.AudioContext ||
+                   window.webkitAudioContext;
+
+  if (!AudioCtx) {
+    alert('Audio is not supported in this browser.');
+    return;
+  }
+
+  if (!audioContext) {
+    audioContext = new AudioCtx();
+    oscillator = audioContext.createOscillator();
+    gainNode = audioContext.createGain();
+
+    oscillator.type = 'sine';
+    oscillator.connect(gainNode);
+    gainNode.connect(audioContext.destination);
+
+    gainNode.gain.value = 0;
+    oscillator.start();
+  }
+
+  await audioContext.resume();
+
+  soundOn = true;
+  soundBtn.textContent = '🔇 Turn Sound Off';
+
+  updateAudio();
+}
+
+soundBtn.addEventListener('click', toggleSound);
+
+// READINGS
+function updateReadings() {
+  const hz = Number(f.value);
+  const v = Number(s.value);
+
+  fo.value = hz + ' Hz';
+  ao.value = a.value + '%';
+  so.value = v + ' m/s';
+
+  document.querySelector('#lambdaRead').textContent =
+    (v / hz).toFixed(1) + ' m';
+
+  document.querySelector('#freqRead').textContent =
+    hz + ' Hz';
+
+  document.querySelector('#speedRead').textContent =
+    v + ' m/s';
+
+  document.querySelector('#periodRead').textContent =
+    (1 / hz).toFixed(3) + ' s';
+
+  updateAudio();
+}
+
+// DRAW DIRECTIONAL WAVES
+function drawWaves(sx, sy, w, h, spacing, amp) {
+  ctx.save();
+
+  // Widening cone to the right
+  ctx.beginPath();
+  ctx.moveTo(sx + 25, sy - 30);
+  ctx.lineTo(w, 0);
+  ctx.lineTo(w, h);
+  ctx.lineTo(sx + 25, sy + 30);
+  ctx.closePath();
+  ctx.clip();
+
+  // Dense alternating bands
+  const waveSpacing = Math.max(5, spacing * 0.22);
+  const waveMotion = (t * 75) % waveSpacing;
+  const waveLength = Math.sqrt(w * w + h * h);
+
+  for (
+    let r = waveMotion;
+    r < waveLength;
+    r += waveSpacing
+  ) {
+    const fade = Math.max(
+      0.12,
+      1 - r / (waveLength * 1.2)
+    );
+
+    // White band
+    ctx.beginPath();
+    ctx.arc(
+      sx + 35,
+      sy,
+      r,
+      -Math.PI * 0.72,
+      Math.PI * 0.72
+    );
+
+    ctx.strokeStyle =
+      `rgba(255,255,255,${0.9 * fade})`;
+    ctx.lineWidth = 3;
+    ctx.stroke();
+
+    // Dark band
+    ctx.beginPath();
+    ctx.arc(
+      sx + 35,
+      sy,
+      r + waveSpacing / 2,
+      -Math.PI * 0.72,
+      Math.PI * 0.72
+    );
+
+    ctx.strokeStyle =
+      `rgba(20,20,20,${0.85 * fade})`;
+    ctx.lineWidth = 3;
+    ctx.stroke();
+  }
+
+  ctx.restore();
+}
+
+// MAIN ANIMATION
+function draw(now) {
+  const d = window.devicePixelRatio || 1;
+  const { w, h } = dimensions();
+
+  ctx.setTransform(d, 0, 0, d, 0, 0);
+  ctx.clearRect(0, 0, w, h);
+
+  // Background
+  ctx.fillStyle = '#858585';
+  ctx.fillRect(0, 0, w, h);
+
+  // Speaker position
+  const sx = Math.max(65, w * 0.17);
+  const sy = h * 0.50;
+
+  // Default listener
+  if (listenerX === null) {
+    listenerX = Math.min(w - 55, w * 0.78);
+    listenerY = h * 0.55;
+  }
+
+  // Default ruler
+  if (rulerX === null) {
+    rulerX = Math.max(5, (w - 375) / 2);
+    rulerY = h - 105;
+  }
+
+  // Wave settings
+  const hz = Number(f.value);
+  const v = Number(s.value);
+  const amp = Number(a.value) / 100;
+
+  const pxPerMeter = Math.min(
+    20,
+    Math.max(
+      7,
+      (w - sx - 70) / Math.max(18, v / hz * 5)
+    )
+  );
+
+  const spacing = Math.max(
+    12,
+    (v / hz) * pxPerMeter
+  );
+
+  // Grid
+  if (showGrid.checked) {
+    ctx.strokeStyle = 'rgba(255,255,255,.12)';
+    ctx.lineWidth = 1;
+
+    for (let x = 0; x < w; x += 30) {
+      ctx.beginPath();
+      ctx.moveTo(x, 0);
+      ctx.lineTo(x, h);
+      ctx.stroke();
+    }
+
+    for (let y = 0; y < h; y += 30) {
+      ctx.beginPath();
+      ctx.moveTo(0, y);
+      ctx.lineTo(w, y);
+      ctx.stroke();
+    }
+  }
+
+  // Draw dense directional sound waves
+  drawWaves(sx, sy, w, h, spacing, amp);
+
+  // Wavelength bracket
+  const bx = sx + 42;
+  const by = sy + 95;
+  const bw = Math.min(
+    spacing,
+    Math.max(0, w - bx - 10)
+  );
+
+  ctx.strokeStyle = '#ffe27a';
+  ctx.fillStyle = '#ffe27a';
+  ctx.lineWidth = 2;
+
+  ctx.beginPath();
+  ctx.moveTo(bx, by);
+  ctx.lineTo(bx + bw, by);
+  ctx.moveTo(bx, by - 5);
+  ctx.lineTo(bx, by + 5);
+  ctx.moveTo(bx + bw, by - 5);
+  ctx.lineTo(bx + bw, by + 5);
+  ctx.stroke();
+
+  ctx.font = 'bold 12px Arial';
+  ctx.textAlign = 'left';
+  ctx.fillText(
+    'λ ≈ ' + (v / hz).toFixed(1) + ' m',
+    bx,
+    by - 9
+  );
+
+  // Ruler
+  if (showRuler.checked) {
+    drawRuler(rulerX, rulerY, w);
+  }
+
+  // Objects
+  speaker(sx, sy);
+  listener(listenerX, listenerY);
+
+  ctx.fillStyle = 'white';
+  ctx.font = 'bold 13px Arial';
+  ctx.textAlign = 'left';
+  ctx.fillText('Speaker', 12, h - 14);
+
+  // Animation timing
+  if (playing && last) {
+    t += (now - last) / 1000 *
+         Number(s.value) / 340;
+  }
+
+  last = now;
+  requestAnimationFrame(draw);
+}
+
+// POINTER POSITION
+function pointerPosition(event) {
+  const rect = c.getBoundingClientRect();
+
+  return {
+    x: event.clientX - rect.left,
+    y: event.clientY - rect.top
+  };
+}
+
+// DRAG START
+c.addEventListener('pointerdown', event => {
+  const { x, y } = pointerPosition(event);
+
+  const rulerWidth = 375;
+  const rulerHeight = 76;
+
+  if (
+    showRuler.checked &&
+    x >= rulerX - 10 &&
+    x <= rulerX + rulerWidth + 10 &&
+    y >= rulerY - 10 &&
+    y <= rulerY + rulerHeight + 10
+  ) {
+    dragging = 'ruler';
+    dragOffsetX = x - rulerX;
+    dragOffsetY = y - rulerY;
+  } else if (
+    Math.abs(x - listenerX) < 32 &&
+    y > listenerY - 55 &&
+    y < listenerY + 45
+  ) {
+    dragging = 'listener';
+    dragOffsetX = x - listenerX;
+    dragOffsetY = y - listenerY;
+  }
+
+  if (dragging) {
+    c.setPointerCapture(event.pointerId);
+  }
+});
+
+// DRAG MOVE
+c.addEventListener('pointermove', event => {
+  if (!dragging) return;
+
+  const { x, y } = pointerPosition(event);
+  const { w, h } = dimensions();
+
+  if (dragging === 'listener') {
+    listenerX = Math.max(
+      35,
+      Math.min(w - 30, x - dragOffsetX)
+    );
+
+    listenerY = Math.max(
+      75,
+      Math.min(h - 65, y - dragOffsetY)
+    );
+  }
+
+  if (dragging === 'ruler') {
+    rulerX = Math.max(
+      5,
+      Math.min(w - 385, x - dragOffsetX)
+    );
+
+    rulerY = Math.max(
+      5,
+      Math.min(h - 81, y - dragOffsetY)
+    );
+  }
+});
+
+function stopDragging() {
+  dragging = null;
+}
+
+c.addEventListener('pointerup', stopDragging);
+c.addEventListener('pointercancel', stopDragging);
+
+// SLIDERS
+[f, a, s].forEach(el => {
+  el.addEventListener('input', updateReadings);
+});
+
+// PLAY / PAUSE
+playBtn.onclick = () => {
+  playing = !playing;
+  playBtn.textContent =
+    playing ? '⏸ Pause' : '▶ Play';
+  last = 0;
+};
+
+// RESET
+document.querySelector('#reset').onclick = () => {
+  t = 0;
+
+  f.value = 4;
+  a.value = 50;
+  s.value = 340;
+
+  showRuler.checked = true;
+  showGrid.checked = false;
+
+  listenerX = null;
+  listenerY = null;
+  rulerX = null;
+  rulerY = null;
+
+  playing = true;
+  playBtn.textContent = '⏸ Pause';
+
+  if (soundOn) {
+    soundOn = false;
+    soundBtn.textContent = '🔊 Turn Sound On';
+
+    if (gainNode && audioContext) {
+      gainNode.gain.setTargetAtTime(
+        0,
+        audioContext.currentTime,
+        0.03
+      );
+    }
+  }
+
+  last = 0;
+  updateReadings();
+};
+
+// START
+updateReadings();
+requestAnimationFrame(draw);
+</script>
+</body>
+</html>
